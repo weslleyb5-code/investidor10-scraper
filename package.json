@@ -2,9 +2,11 @@
   "name": "investidor10-scraper",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "googleapis": "^126.0.1",
-    "playwright": "^1.46.0"
+    "playwright": "^1.43.0",
+    "googleapis": "^118.0.0"
   }
 }
