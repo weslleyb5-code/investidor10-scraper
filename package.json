@@ -1,0 +1,10 @@
+{
+  "name": "investidor10-scraper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "googleapis": "^126.0.1",
+    "playwright": "^1.46.0"
+  }
+}
