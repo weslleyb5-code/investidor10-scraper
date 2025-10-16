@@ -1,22 +1,31 @@
 name: Investidor10 Scraper
 
 on:
+  workflow_dispatch: {}
   schedule:
-    - cron: "*/30 * * * *" # roda a cada 30 minutos
-  workflow_dispatch:
+    - cron: '30 * * * *'  # roda aos :30 de cada hora (UTC)
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout código
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Instalar dependências
-        run: npm install
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-      - name: Executar scraper
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run scraper
         env:
           SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
+          SHEET_TAB: ${{ secrets.SHEET_TAB }}
         run: node index.js
