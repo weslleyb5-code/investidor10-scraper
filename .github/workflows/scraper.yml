@@ -18,10 +18,9 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps
 
       - name: Run scraper
         env:
