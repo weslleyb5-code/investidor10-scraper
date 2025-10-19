@@ -1,5 +1,5 @@
-import fetch from "node-fetch";
-import { google } from "googleapis";
+const fetch = require("node-fetch");
+const { google } = require("googleapis");
 
 // === CONFIGURAÇÃO ===
 const sheetId = process.env.SHEET_ID;
@@ -50,7 +50,7 @@ async function fetchInvestidor10Data() {
     allData = allData.concat(json.data);
     start += length;
 
-    if (json.data.length < length) break; // última página
+    if (json.data.length < length) break;
   }
 
   console.log(`Total de FIIs coletados: ${allData.length}`);
@@ -88,7 +88,7 @@ async function writeToGoogleSheet(values) {
     await writeToGoogleSheet(data);
     console.log("✅ Dados atualizados com sucesso!");
   } catch (err) {
-    console.error("❌ Erro ao buscar ou escrever dados:", err);
+    console.error("Erro ao atualizar dados:", err);
     process.exit(1);
   }
 })();
