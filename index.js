@@ -1,90 +1,83 @@
-import fetch from "node-fetch";
-import { google } from "googleapis";
+import fetch from 'node-fetch';
+import { google } from 'googleapis';
 
-// === CONFIGURAÇÃO ===
-const sheetId = process.env.SHEET_ID;
-const sheetTab = process.env.SHEET_TAB || "Investidor10";
-const serviceAccountJson = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
+const SHEET_ID = process.env.SHEET_ID;
+const SHEET_TAB = process.env.SHEET_TAB || 'Investidor10';
+const SERVICE_ACCOUNT_JSON = process.env.SERVICE_ACCOUNT_JSON;
 
-// === GOOGLE AUTH ===
+// Autenticação com Google Sheets
 const auth = new google.auth.GoogleAuth({
-  credentials: serviceAccountJson,
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  credentials: JSON.parse(SERVICE_ACCOUNT_JSON),
+  scopes: ['https://www.googleapis.com/auth/spreadsheets']
 });
-const sheets = google.sheets({ version: "v4", auth });
+const sheets = google.sheets({ version: 'v4', auth });
 
-// === FUNÇÃO PRINCIPAL ===
+// Função principal
 async function fetchInvestidor10Data() {
-  let start = 0;
-  const length = 100; // até 100 por página
-  let allData = [];
-
-  while (true) {
-    const body = new URLSearchParams({
-      start: start.toString(),
-      length: length.toString(),
-      "ranges[p_vp][0]": "0",
-      "ranges[p_vp][1]": "100",
-      "ranges[dividend_yield][0]": "0",
-      sector: "",
-      type: "",
-      "order[0][column]": "p_vp",
-      "order[0][dir]": "asc",
-    });
-
-    const res = await fetch("https://investidor10.com.br/api/fii/advanced-search", {
-      method: "POST",
-      headers: {
-        "accept": "application/json, text/javascript, */*; q=0.01",
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "x-requested-with": "XMLHttpRequest",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      },
-      body,
-    });
-
-    const json = await res.json();
-
-    if (!json?.data?.length) break;
-
-    allData = allData.concat(json.data);
-    start += length;
-
-    // se retornou menos do que o máximo, é a última página
-    if (json.data.length < length) break;
-  }
-
-  console.log(`Total de FIIs coletados: ${allData.length}`);
-
-  return allData.map(fii => [
-    fii.ticker,
-    fii.nome,
-    fii.dividend_yield,
-    fii.p_vp,
-    fii.valor_cota,
-    fii.patrimonio_liquido,
-    fii.setor,
-  ]);
-}
-
-// === ESCREVER NA PLANILHA ===
-async function writeToGoogleSheet(values) {
-  const resource = {
-    values: [["Ticker", "Nome", "DY (%)", "P/VP", "Cota (R$)", "Patrimônio (R$)", "Setor"], ...values],
+  const url = 'https://investidor10.com.br/fiis/api/filter-funds';
+  const body = {
+    search: "",
+    segment: [],
+    administrator: [],
+    type: [],
+    order: "dy",
+    orderType: "desc",
+    page: 1,
+    size: 1000
   };
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: sheetId,
-    range: `${sheetTab}!A1`,
-    valueInputOption: "USER_ENTERED",
-    resource,
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Referer': 'https://investidor10.com.br/fiis/busca-avancada/',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(body)
   });
+
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dados: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data?.data?.length) {
+    throw new Error('Nenhum dado retornado pela API.');
+  }
+
+  // Cabeçalhos
+  const headers = [
+    'Código', 'Nome', 'Segmento', 'DY', 'P/VP', 'Preço Atual',
+    'Valor Patrimonial', 'Liquidez Diária', 'Vacância', 'Último Rendimento'
+  ];
+
+  const rows = data.data.map(item => [
+    item.ticker,
+    item.name,
+    item.segment,
+    item.dy,
+    item.p_vp,
+    item.price,
+    item.patrimonial_value,
+    item.liquidez_media_diaria,
+    item.vacancia,
+    item.ultimo_rendimento
+  ]);
+
+  // Escreve na planilha
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${SHEET_TAB}!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [headers, ...rows] }
+  });
+
+  console.log(`✅ Dados atualizados com sucesso (${rows.length} FIIs).`);
 }
 
-// === EXECUTAR ===
-(async () => {
-  console.log("Buscando dados do Investidor10...");
-  const data = await fetchInvestidor10Data();
-  await writeToGoogleSheet(data);
-  console.log("✅ Dados atualizados com sucesso!");
-})();
+// Executa
+fetchInvestidor10Data().catch(err => {
+  console.error('Erro:', err.message);
+  process.exit(1);
+});
