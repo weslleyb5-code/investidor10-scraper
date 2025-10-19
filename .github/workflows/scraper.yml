@@ -18,9 +18,7 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        run: |
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps
+        run: npm install node-fetch googleapis
 
       - name: Run scraper
         env:
